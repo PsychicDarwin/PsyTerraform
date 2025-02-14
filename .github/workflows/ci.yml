@@ -21,8 +21,8 @@ jobs:
         uses: tj-actions/changed-files@v41
         with:
           files: |
-            **/*.tf
-            **/*.tfvars
+            *.tf
+            *.tfvars
 
       - name: Make script executable
         if: steps.changed-files.outputs.any_changed == 'true'
