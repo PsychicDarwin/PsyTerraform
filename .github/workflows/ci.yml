@@ -19,17 +19,11 @@ jobs:
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v41
-        with:
-          files: |
-            *.tf
-            *.tfvars
 
       - name: Make script executable
-        if: steps.changed-files.outputs.any_changed == true
         run: chmod +x .github/scripts/send-alert.sh
 
       - name: Send Discord Notification
-        if: steps.changed-files.outputs.any_changed == true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
