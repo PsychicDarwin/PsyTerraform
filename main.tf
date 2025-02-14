@@ -43,7 +43,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "psycore_bucket_en
   }
 }
 
-# S3 Bucket for CloudTrail logs
+# S3 Bucket for CloudTrail logs (Monitoring IAM activity)
 resource "aws_s3_bucket" "cloudtrail_bucket" {
   bucket = lower("${var.service_name}-cloudtrail-logs-${data.aws_caller_identity.current.account_id}")
 
