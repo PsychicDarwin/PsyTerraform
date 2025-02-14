@@ -274,7 +274,8 @@ resource "aws_iam_policy" "psycore_policy" {
         Action = [
           "s3:GetObject",
           "s3:PutObject",
-          "s3:DeleteObject"
+          "s3:DeleteObject",
+          "s3:ListAllMyBuckets"
         ]
         Resource = "${aws_s3_bucket.psycore_bucket.arn}/*"
       },
@@ -286,10 +287,23 @@ resource "aws_iam_policy" "psycore_policy" {
         Resource = "*"
       },
       {
+        "Effect": "Allow",
+        "Action": [
+            "bedrock:ListFoundationModels",
+            "bedrock:GetFoundationModel",
+            "bedrock:ListCustomModels",
+            "bedrock:GetCustomModel",
+            "bedrock:ListModelCustomizationJobs",
+            "bedrock:GetModelCustomizationJob",
+            "bedrock:InvokeModel",
+            "bedrock:InvokeModelWithResponseStream"
+        ],
+        "Resource": "*"
+      },
+      {
         Effect = "Allow"
         Action = [
-          "opensearch:*",
-          "docdb:*"
+          "opensearch:*"
         ]
         Resource = "*"
       },
