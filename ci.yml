@@ -1,0 +1,84 @@
+name: Terraform Permission Alert
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  notify-permission-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: |
+            **/*.tf
+            **/*.tfvars
+
+      - name: Set up Node.js
+        if: steps.changed-files.outputs.any_changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Send Discord Notification
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: |
+          AUTHOR_NAME="$(git log -1 --pretty="%aN")"
+          COMMITTER_NAME="$(git log -1 --pretty="%cN")"
+          COMMIT_SUBJECT="$(git log -1 --pretty="%s")"
+          COMMIT_MESSAGE="$(git log -1 --pretty="%b")"
+          COMMIT_SHA="$(git rev-parse --short HEAD)"
+          REPOSITORY="${GITHUB_REPOSITORY}"
+          CHANGED_FILES="${{ steps.changed-files.outputs.all_changed_files }}"
+          
+          if [ "$AUTHOR_NAME" == "$COMMITTER_NAME" ]; then
+              CREDITS="$AUTHOR_NAME authored & committed"
+          else
+              CREDITS="$AUTHOR_NAME authored & $COMMITTER_NAME committed"
+          fi
+          
+          TIMESTAMP=$(date --utc +%FT%TZ)
+          
+          WEBHOOK_DATA='{
+              "embeds": [{
+                  "color": 16737095,
+                  "author": {
+                      "name": "🔄 Permission Update Alert - '"$REPOSITORY"'"
+                  },
+                  "title": "'"$COMMIT_SUBJECT"'",
+                  "description": "⚠️ Infrastructure permissions have been modified\\n\\n**Changed Files:**\\n```\\n'"$CHANGED_FILES"'\\n```\\n\\n'"$CREDITS"'",
+                  "fields": [
+                      {
+                          "name": "Commit",
+                          "value": "'"$COMMIT_SHA"'",
+                          "inline": true
+                      },
+                      {
+                          "name": "Branch",
+                          "value": "'"${GITHUB_REF#refs/heads/}"'",
+                          "inline": true
+                      }
+                  ],
+                  "timestamp": "'"$TIMESTAMP"'"
+              }]
+          }'
+          
+          curl --fail --progress-bar \
+              -A "GitHub-Actions-Webhook" \
+              -H "Content-Type: application/json" \
+              -d "$WEBHOOK_DATA" \
+              "$DISCORD_WEBHOOK" \
+              && echo -e "\n[Webhook]: Successfully sent the webhook." \
+              || echo -e "\n[Webhook]: Unable to send webhook."
