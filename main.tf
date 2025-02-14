@@ -289,6 +289,12 @@ resource "aws_iam_policy" "psycore_policy" {
       {
         "Effect": "Allow",
         "Action": [
+            "bedrock:ListGuardrails",
+            "bedrock:ListInferenceProfiles",
+            "bedrock:ListProvisionedModelThroughputs",
+            "sagemaker:ListHubContents",
+            "bedrock:GetFoundationModelAvailability",
+            "bedrock:ListMarketplaceModelEndpoints",
             "bedrock:ListFoundationModels",
             "bedrock:GetFoundationModel",
             "bedrock:ListCustomModels",
