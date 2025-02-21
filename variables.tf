@@ -21,3 +21,15 @@ variable "service_name" {
   type        = string
   default     = "PsyCore"
 }
+
+variable "team_members" {
+  description = "List of team member names"
+  type        = list(string)
+  default = [
+    "Sebastian",
+    "Anastasiia",
+    "Jasmine",
+    "Arun",
+    "Louis"
+  ]
+}

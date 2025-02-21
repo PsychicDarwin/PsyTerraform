@@ -231,9 +231,15 @@ resource "aws_iam_role" "psycore_role" {
   }
 }
 
+# Group for team members
+resource "aws_iam_group" "team" {
+  name = "${var.service_name}Team"
+}
+
 # IAM User
 resource "aws_iam_user" "psycore_user" {
-  name = lower("${var.service_name}-service-user")
+  for_each                = toset(var.team_members)
+  name = lower("${var.service_name}-${each.value}")
   
   tags = {
     Project = var.project_name
@@ -242,16 +248,25 @@ resource "aws_iam_user" "psycore_user" {
   }
 }
 
+# Add users to group
+resource "aws_iam_group_membership" "team" {
+  name  = "${var.service_name}TeamMembership"
+  group = aws_iam_group.team.name
+  users = [for user in aws_iam_user.psycore_user : user.name]
+}
+
 # Login profile for console access
 resource "aws_iam_user_login_profile" "psycore_user_login" {
-  user                    = aws_iam_user.psycore_user.name
+  for_each                = toset(var.team_members)
+  user                    = aws_iam_user.psycore_user[each.key].name
   password_reset_required = true
   password_length        = 20
 }
 
 # Access Key for the user
 resource "aws_iam_access_key" "psycore_user_key" {
-  user = aws_iam_user.psycore_user.name
+  for_each                = toset(var.team_members)
+  user                    = aws_iam_user.psycore_user[each.key].name
 }
 
 # Custom policy for Bedrock and S3 access
@@ -330,7 +345,7 @@ resource "aws_iam_policy" "psycore_policy" {
         Action = [
           "iam:ChangePassword"
         ]
-        Resource = "arn:aws:iam::*:user/${aws_iam_user.psycore_user.name}"
+        Resource = "arn:aws:iam::*:user/$${aws:username}"
       }
     ]
   })
@@ -350,7 +365,8 @@ resource "aws_iam_role_policy_attachment" "psycore_role_policy" {
 
 # Attach policy to user
 resource "aws_iam_user_policy_attachment" "psycore_user_policy" {
-  user       = aws_iam_user.psycore_user.name
+  for_each   = toset(var.team_members)
+  user       = aws_iam_user.psycore_user[each.key].name
   policy_arn = aws_iam_policy.psycore_policy.arn
 }
 

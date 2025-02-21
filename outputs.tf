@@ -13,27 +13,17 @@ output "iam_role_arn" {
   value       = aws_iam_role.psycore_role.arn
 }
 
-output "iam_user_name" {
-  description = "Name of the created IAM user"
-  value       = aws_iam_user.psycore_user.name
-}
-
-output "iam_user_access_key" {
-  description = "Access key for the created IAM user"
-  value       = aws_iam_access_key.psycore_user_key.id
-  sensitive   = true
-}
-
-output "iam_user_secret_key" {
-  description = "Secret key for the created IAM user"
-  value       = aws_iam_access_key.psycore_user_key.secret
-  sensitive   = true
-}
-
-output "console_password" {
-  description = "Initial console password for the IAM user (change required on first login)"
-  value       = aws_iam_user_login_profile.psycore_user_login.password
-  sensitive   = true
+output "team_member_credentials" {
+  description = "All credentials for team members (usernames, access keys, and passwords)"
+  value = {
+    for user in var.team_members : user => {
+      username    = aws_iam_user.psycore_user[user].name
+      access_key  = aws_iam_access_key.psycore_user_key[user].id
+      secret_key  = aws_iam_access_key.psycore_user_key[user].secret
+      password    = aws_iam_user_login_profile.psycore_user_login[user].password
+    }
+  }
+  sensitive = true
 }
 
 output "cloudtrail_bucket_name" {
