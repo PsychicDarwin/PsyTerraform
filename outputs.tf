@@ -1,11 +1,11 @@
-output "s3_bucket_name" {
-  description = "Name of the created S3 bucket"
-  value       = aws_s3_bucket.psycore_bucket.id
+output "s3_bucket_names" {
+  description = "Names of the created S3 buckets"
+  value       = { for k, v in aws_s3_bucket.psycore_buckets : k => v.id }
 }
 
-output "s3_bucket_arn" {
-  description = "ARN of the created S3 bucket"
-  value       = aws_s3_bucket.psycore_bucket.arn
+output "s3_bucket_arns" {
+  description = "ARNs of the created S3 buckets"
+  value       = { for k, v in aws_s3_bucket.psycore_buckets : k => v.arn }
 }
 
 output "iam_role_arn" {

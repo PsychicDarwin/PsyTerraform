@@ -2,29 +2,41 @@ provider "aws" {
   region = var.aws_region
 }
 
-# S3 Bucket for service use
-resource "aws_s3_bucket" "psycore_bucket" {
-  bucket = lower("${var.service_name}-documents-${data.aws_caller_identity.current.account_id}")
+
+locals {
+  bucket_versions = [
+    "documents",
+    "document-graphs",
+    "document-images"
+  ]
+}
+
+# S3 Buckets for service use - dynamically created based on bucket_versions
+resource "aws_s3_bucket" "psycore_buckets" {
+  for_each = toset(local.bucket_versions)
+  bucket = lower("${var.service_name}-${each.value}-${data.aws_caller_identity.current.account_id}")
 
   tags = {
-    Name        = "${var.service_name} Documents"
+    Name        = "${var.service_name} ${title(each.value)}"
     Environment = var.environment
     Project     = var.project_name
     Service     = var.service_name
   }
 }
 
-# Bucket versioning
+# Bucket versioning - dynamically created
 resource "aws_s3_bucket_versioning" "psycore_bucket_versioning" {
-  bucket = aws_s3_bucket.psycore_bucket.id
+  for_each = toset(local.bucket_versions)
+  bucket = aws_s3_bucket.psycore_buckets[each.key].id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-# Private access only
+# Private access only - dynamically created
 resource "aws_s3_bucket_public_access_block" "psycore_bucket_access" {
-  bucket = aws_s3_bucket.psycore_bucket.id
+  for_each = toset(local.bucket_versions)
+  bucket = aws_s3_bucket.psycore_buckets[each.key].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -32,9 +44,10 @@ resource "aws_s3_bucket_public_access_block" "psycore_bucket_access" {
   restrict_public_buckets = true
 }
 
-# Server-side encryption
+# Server-side encryption - dynamically created
 resource "aws_s3_bucket_server_side_encryption_configuration" "psycore_bucket_encryption" {
-  bucket = aws_s3_bucket.psycore_bucket.id
+  for_each = toset(local.bucket_versions)
+  bucket = aws_s3_bucket.psycore_buckets[each.key].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -62,6 +75,7 @@ resource "aws_s3_bucket_versioning" "cloudtrail_bucket_versioning" {
     status = "Enabled"
   }
 }
+
 
 # CloudTrail bucket encryption
 resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_bucket_encryption" {
@@ -277,13 +291,15 @@ resource "aws_iam_policy" "psycore_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # Dynamically create ListBucket permissions for all buckets
       {
         Effect = "Allow"
         Action = [
           "s3:ListBucket"
         ]
-        Resource = aws_s3_bucket.psycore_bucket.arn
+        Resource = [for bucket in local.bucket_versions : aws_s3_bucket.psycore_buckets[bucket].arn]
       },
+      # Dynamically create object-level permissions for all buckets
       {
         Effect = "Allow"
         Action = [
@@ -292,7 +308,7 @@ resource "aws_iam_policy" "psycore_policy" {
           "s3:DeleteObject",
           "s3:ListAllMyBuckets"
         ]
-        Resource = "${aws_s3_bucket.psycore_bucket.arn}/*"
+        Resource = [for bucket in local.bucket_versions : "${aws_s3_bucket.psycore_buckets[bucket].arn}/*"]
       },
       {
         Effect = "Deny"
